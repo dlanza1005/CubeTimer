@@ -3,17 +3,18 @@
 # Rubiks Cube Timer Program Requirements:
 #   -be a very clear graph that is very clear that it is a graph
 #   -must look good!
-#   -must be clear numerical denominations on Y axis
-#   -show scatterplot [future: other plot types]
-#   -keep constant Y range
-#   -adjustable window size
+#   x-must be clear numerical denominations on Y axis
+#   x-show scatterplot [future: other plot types]
+#   x-keep constant Y range
+#   x-adjustable window size
 #   wtf else?
 #
 # fix/add to existing version:
 #   -backspace should delete characters while held down, rather than once per button press.
 #   -mouse over a datapoint should show the time and the comment.
-#   -show last time on the timer display rather than getting rid of it
+#   x-show last time on the timer display rather than getting rid of it
 #   -should be able to delete solves
+#   -move countdown functionality into the timer class?
 
 
 ###########################
@@ -166,9 +167,30 @@ def draw_grid(surface, ctx, step=5):
         surface.blit(label, label_rect)
 
 
+# def draw_points(surface, ctx, values):
+#     for i, v in enumerate(values):
+#         pygame.draw.circle(surface, WHITE,(ctx.x(i), ctx.y(v)), 4)
 def draw_points(surface, ctx, values):
+    global scatter_point_hits
+    scatter_point_hits = []
+
+    radius = 6
+    hit_radius = 10  # easier to click
+
     for i, v in enumerate(values):
-        pygame.draw.circle(surface, WHITE,(ctx.x(i), ctx.y(v)), 4)
+        x = ctx.x(i)
+        y = ctx.y(v)
+
+        pygame.draw.circle(surface, WHITE, (x, y), radius)
+
+        # store clickable region
+        hitbox = pygame.Rect(
+            x - hit_radius,
+            y - hit_radius,
+            hit_radius * 2,
+            hit_radius * 2
+        )
+        scatter_point_hits.append((i, hitbox))
 
 
 def draw_std_boxes(surface, ctx, values, window):
@@ -212,9 +234,7 @@ def draw_scatterplot_cached(screen, scatter_rect, session_list):
         print("Rebuilding scatterplot surface")
         scatter_plot_surface = pygame.Surface(scatter_rect.size)
         scatter_plot_surface.fill(FG_COLOR)  # Fill with black or another background
-        # Build the scatterplot on scatter_plot_surface
-        #if len(session_list) > 1:
-        # Extract the solve times
+
         solve_times = [time for _, time, _ in session_list]
         ctx = PlotContext(scatter_rect, 0, 30, len(solve_times))
 
@@ -247,41 +267,28 @@ session_list = []
 
 def load_session_data(filepath):
     session_list = []
-
     if not os.path.exists(filepath):
         print("doesnt exist")
         return session_list
-
     with open(filepath, "r") as f:
         print("did exist")
         for line in f:
-            #print("before line.strip")
             line = line.strip()
-            #print(line)
             if not line:
-                #print("not line")
                 continue
-
             try:
-                #print("after try, before code")
                 stuff = line.split(",", 2)
                 timestamp = stuff[0]
                 duration = stuff[1]
                 comment = stuff[2]
-                #print(stuff)
-                # print(timestamp)
-                # print(duration)
-                # print(comment)
                 session_list.append((timestamp, float(duration), comment))
-                #print("after try, after code")
             except ValueError:
-                # Skip malformed lines
+                print("line skipped!")
                 continue
-
     return session_list
 
-last_session_list = load_session_data(DATA_FILE)
-session_list = last_session_list
+#last_session_list = load_session_data(DATA_FILE)
+#session_list = last_session_list
 #print(session_list)
 #####################################################
 #####################################################
@@ -292,6 +299,7 @@ user_comment = ""
 # Get screen size for dynamic layout
 screen_width, screen_height = screen.get_size()
 
+#####################################################
 # Calculate scatter plot height to fill the remaining space
 scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT - 4 * outer_margin
 
@@ -316,8 +324,37 @@ def update_sections():
     return timer_rect, scatter_rect, comment_rect, save_button_rect
 
 timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
+#####################################################
+# tryinng to remove outer_margin from this.
+# # Calculate scatter plot height to fill the remaining space
+# scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT
 
+# # Define rectangles
+# timer_rect = pygame.Rect(0, 0, screen_width, TIMER_HEIGHT)
+# scatter_rect = pygame.Rect(0, timer_rect.bottom, screen_width, scatter_rect_height)
+# comment_rect = pygame.Rect(0, scatter_rect.bottom, screen_width, COMMENT_HEIGHT)
+# save_button_rect = pygame.Rect(timer_rect.width - 140, timer_rect.bottom - 40, 140, 40)
 
+# def update_sections():
+#     # Get screen size for dynamic layout
+#     screen_width, screen_height = screen.get_size()
+
+#     # Calculate scatter plot height to fill the remaining space
+#     scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT
+
+#     # Define rectangles
+#     timer_rect = pygame.Rect(0, 0, screen_width, TIMER_HEIGHT)
+#     timer_rect = timer_rect.inflate(-outer_margin,-outer_margin)
+#     scatter_rect = pygame.Rect(0, timer_rect.bottom, screen_width, scatter_rect_height)
+#     scatter_rect = scatter_rect.inflate(-outer_margin,-outer_margin)
+#     comment_rect = pygame.Rect(0, scatter_rect.bottom, screen_width, COMMENT_HEIGHT)
+#     comment_rect = comment_rect.inflate(-outer_margin,-outer_margin)
+#     save_button_rect = pygame.Rect(timer_rect.width - 140, timer_rect.bottom - 40, 140, 40)
+#     save_button_rect = save_button_rect.inflate(-outer_margin,-outer_margin)
+#     return timer_rect, scatter_rect, comment_rect, save_button_rect
+
+# timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
+#####################################################
 
 # Main loop
 running = True
@@ -358,6 +395,13 @@ while running:
                 session_list.clear()  # Clear the session list after saving
             elif comment_rect.collidepoint(event.pos):
                 input_active = True
+            elif scatter_rect.collidepoint(event.pos):
+                local_x = event.pos[0] - scatter_rect.x
+                local_y = event.pos[1] - scatter_rect.y
+                for i, hitbox in scatter_point_hits:
+                    if hitbox.collidepoint((local_x, local_y)):
+                        del session_list[i]
+                        break
             else:
                 input_active = False
 
@@ -401,7 +445,7 @@ while running:
     pygame.draw.rect(screen, FG_COLOR, scatter_rect, border_radius = BORDER_RADIUS)
 
     # Draw scatter plot inside the scatter_rect
-    shrunken_rect = scatter_rect.inflate(-outer_margin*2,-outer_margin*2)
+    shrunken_rect = scatter_rect.inflate(-outer_margin, -outer_margin)
     draw_scatterplot_cached(screen, shrunken_rect, session_list)
 
     # Draw the outer rectangle for the comment section
