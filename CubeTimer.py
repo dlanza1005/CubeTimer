@@ -44,21 +44,33 @@ DARK = (50, 50, 50)
 RED = (200, 0, 0)
 BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
-FONT = pygame.font.SysFont('Courier', 60)
-LABEL_FONT = pygame.font.SysFont('Courier', 20)
-BUTTON_FONT = pygame.font.SysFont('Courier', 20)
-INPUT_FONT = pygame.font.SysFont('Courier', 20)
+GREEN = (0,255,0)
+ORANGE1 = (230,80,0)
+ORANGE2 = (230,128,0)
+ORANGE3 = (230,158,0)
+BG_COLOR = ORANGE3
+FG_COLOR = ORANGE2
+POINT_COLOR = WHITE
+AVG_COLOR = ORANGE3
+TIMER_FONT = pygame.font.SysFont('Courier', 60, bold = True)
+LABEL_FONT = pygame.font.SysFont('Courier', 20, bold = True)
+BUTTON_FONT = pygame.font.SysFont('Courier', 20, bold = True)
+INPUT_FONT = pygame.font.SysFont('Courier', 20, bold = True)
 
 # Fixed heights for timer and comment boxes
-TIMER_HEIGHT = 100
-COMMENT_HEIGHT = 40
-outer_margin = 10  # Define outer_margin here
+TIMER_HEIGHT = 100 # pixels
+SCATTER_HEIGHT = .65 # %
+HISTOGRAM_HEIGHT = .35 # %
+COMMENT_HEIGHT = 40 # pixels
+BORDER_RADIUS = 10
+outer_margin = 10  # pixels
 
 # Initialize screen (with resizable window)
 screen = pygame.display.set_mode((600, 700), pygame.RESIZABLE)
 pygame.display.set_caption("Rubik's Cube Timer")
 
 scatter_plot_surface = None
+histogram_surface = None
 last_scatter_size = (0, 0)
 last_session_list = []
 
@@ -93,493 +105,186 @@ class CubeTimer:
         else:
             return 0.0
 
-############################################################################################
-### original working version
-# def draw_scatterplot_cached(screen, scatter_rect, session_list):
-#     global scatter_plot_surface, last_scatter_size, last_session_list
-
-#     # Check if we need to rebuild the scatterplot surface
-#     if (scatter_plot_surface is None 
-#         or (scatter_rect.width, scatter_rect.height) != last_scatter_size
-#         or session_list != last_session_list):
-
-#         print("Rebuilding scatterplot surface")
-        
-#         scatter_plot_surface = pygame.Surface((scatter_rect.width, scatter_rect.height))
-#         scatter_plot_surface.fill(BLACK)  # Fill with black or another background
-
-#         # Build the scatterplot on scatter_plot_surface
-#         if len(session_list) > 1:
-#             # Extract the solve times
-#             solve_times = [time for _, time, _ in session_list]
-#             num_solves = len(solve_times)
-
-#             # Determine the scale of the plot
-#             max_time = 30 # max(solve_times)
-#             min_time = 5 #min(solve_times)
-#             time_range = max_time - min_time
-#             if time_range == 0:
-#                 time_range = 1
-
-#             plot_width = scatter_rect.width - 20
-#             plot_height = scatter_rect.height - 20
-#             point_radius = 10
-
-#             # Draw lines every 5 seconds
-#             for i in range(0, int(max_time), 5):
-#                 y = 10 + int((1 - (i - min_time) / time_range) * plot_height)
-#                 color = (255, 0, 0) if i == 15 else (100, 100, 100)
-#                 pygame.draw.line(scatter_plot_surface, color, (10, y), (plot_width, y), 1)
-
-#             # Draw points
-#             for i, solve_time in enumerate(solve_times):
-#                 x = 10 + int(i * (plot_width / (num_solves - 1)))
-#                 y = 10 + int((1 - (solve_time - min_time) / time_range) * plot_height)
-#                 pygame.draw.circle(scatter_plot_surface, (0, 0, 255), (x, y), point_radius)
-
-#         # Update cached size and data
-#         last_scatter_size = (scatter_rect.width, scatter_rect.height)
-#         last_session_list = list(session_list)
-
-#     # Blit the cached scatterplot onto the screen
-#     screen.blit(scatter_plot_surface, (scatter_rect.x, scatter_rect.y))
-
-######################################################################################################
-### edited version that currenntly works
-
-# def draw_scatterplot_cached(screen, scatter_rect, session_list):
-#     global scatter_plot_surface, last_scatter_size, last_session_list
-
-#     # Check if we need to rebuild the scatterplot surface
-#     if (scatter_plot_surface is None or (scatter_rect.width, scatter_rect.height) != last_scatter_size or session_list != last_session_list):
-
-#         print("Rebuilding scatterplot surface")
-        
-#         scatter_plot_surface = pygame.Surface((scatter_rect.width, scatter_rect.height))
-#         scatter_plot_surface.fill(BLACK)  # Fill with black or another background
-
-#         # Build the scatterplot on scatter_plot_surface
-#         if len(session_list) > 1:
-#             # Extract the solve times
-#             solve_times = [time for _, time, _ in session_list]
-#             num_solves = len(solve_times)
-
-#             # Determine the scale of the plot
-#             max_time = 30 # max(solve_times)
-#             min_time = 5 #min(solve_times)
-#             time_range = max_time - min_time
-#             if time_range == 0:
-#                 time_range = 1
-
-#             plot_border = 10
-#             plot_width = scatter_rect.width - 2*plot_border
-#             plot_height = scatter_rect.height - 2*plot_border
-#             point_radius = 8
-
-#             # Draw lines every 5 seconds
-#             for i in range(0, int(max_time), 5):
-#                 y = plot_border + int((1 - (i - min_time) / time_range) * plot_height)
-#                 color = (200, 200, 200) if i == 15 else (100, 100, 100)
-#                 pygame.draw.line(scatter_plot_surface, color, (plot_border, y), (plot_width, y), 1)
-#                 label_text = LABEL_FONT.render(f"Save ({i})", True, WHITE)
-#                 screen.blit(label_text, (0, y-10))
-
-#             # Draw points
-#             for i, solve_time in enumerate(solve_times):
-#                 x = plot_border + int(i * (plot_width / (num_solves - 1)))
-#                 y = plot_border + int((1 - (solve_time - min_time) / time_range) * plot_height)
-#                 pygame.draw.circle(scatter_plot_surface, (0, 0, 255), (x, y), point_radius)
-
-#         # Update cached size and data
-#         last_scatter_size = (scatter_rect.width, scatter_rect.height)
-#         last_session_list = list(session_list)
-
-#     # Blit the cached scatterplot onto the screen
-#     screen.blit(scatter_plot_surface, (scatter_rect.x, scatter_rect.y))
-
 
 ###################################################################################################
-### nnew edited version (blobs of a1-5)
+class PlotContext:
+    def __init__(self, rect, min_time, max_time, count):
+        self.rect = rect
+        self.min_time = min_time
+        self.max_time = max_time
+        self.range = max_time - min_time or 1
+        self.border = outer_margin
+        self.width = rect.width - 2*self.border
+        self.height = rect.height - 2*self.border
+        self.count = max(count, 2)
 
-# def centered_stats(lst, n):
-#     averages = []
-#     stddevs = []
-#     length = len(lst)
-#     for i in range(length):
-#         # Window bounds
-#         start = max(0, i - n)
-#         end   = min(length, i + n + 1)
-#         window = lst[start:end]
-#         mean = sum(window) / len(window)
-#         # Standard deviation
-#         variance = sum((x - mean)**2 for x in window) / len(window)
-#         std = math.sqrt(variance)
-#         print("mean ")
-#         print(mean)
-#         print("std ")
-#         print(std)
-#         # Store results
-#         averages.append(mean)
-#         stddevs.append(std)
-#     return averages, stddevs
+    def x(self, i):
+        return self.border + int(i * self.width / (self.count - 1))
+
+    def y(self, value):
+        return self.border + int((1 - (value - self.min_time) / self.range) * self.height)
 
 
-# def draw_scatterplot_cached(screen, scatter_rect, session_list):
-#     global scatter_plot_surface, last_scatter_size, last_session_list
-#     # Check if we need to rebuild the scatterplot surface
-#     if (scatter_plot_surface is None or (scatter_rect.width, scatter_rect.height) != last_scatter_size or session_list != last_session_list):
-#         print("Rebuilding scatterplot surface")
-#         scatter_plot_surface = pygame.Surface((scatter_rect.width, scatter_rect.height))
-#         scatter_plot_surface.fill(BLACK)  # Fill with black or another background
-#         # Build the scatterplot on scatter_plot_surface
-#         if len(session_list) > 1:
-#             # Extract the solve times
-#             solve_times = [time for _, time, _ in session_list]
-#             num_solves = len(solve_times)
-#             # Determine the scale of the plot
-#             max_time = 30 # max(solve_times)
-#             min_time = 0 #min(solve_times)
-#             time_range = max_time - min_time
-#             if time_range == 0:
-#                 time_range = 1
-#             plot_border = 10
-#             plot_width = scatter_rect.width - 2*plot_border
-#             plot_height = scatter_rect.height - 2*plot_border
-#             point_radius = 5
+##################################################################################################
+# Statistical functions
+
+def rolling_mean_std(values, window):
+    means, stds = [], []
+    for i in range(len(values)):
+        start = max(0, i - window)
+        end = min(len(values), i + window + 1)
+        w = values[start:end]
+        mean = sum(w) / len(w)
+        var = sum((x - mean)**2 for x in w) / len(w)
+        means.append(mean)
+        stds.append(math.sqrt(var))
+    return means, stds
+
+def ao5(values):
+    out = []
+    for i in range(4, len(values)):
+        w = values[i-4:i+1]
+        out.append(((sum(w) - min(w) - max(w)) / 3))
+    return out
+
+##################################################################################################
+# Drawing functions
+
+def draw_grid(surface, ctx, step=5):
+    grid_color = ORANGE3 #WHITE # (50, 50, 50)
+    label_color = ORANGE3 #WHITE # (120, 120, 120)
+
+    for t in range(int(ctx.min_time), int(ctx.max_time) + 1, step):
+        y = ctx.y(t)
+
+        # Horizontal grid line
+        pygame.draw.line(surface, grid_color, (ctx.border*3, y), (ctx.border + ctx.width, y), 2)
+
+        # Y-axis label (left side)
+        label = LABEL_FONT.render(str(t), True, label_color)
+        label_rect = label.get_rect( right=ctx.border+15, centery=y)
+        surface.blit(label, label_rect)
 
 
-
-#             window = 5
-#             a10, s10 = centered_stats(solve_times,window)
-#             # Draw average of 5 points
-#             for i, a10t in enumerate(a10):
-#                 x10 = plot_border + int(i * (plot_width / (num_solves - 1)))
-#                 y10 = plot_border + int((1 - (a10t - min_time) / time_range) * plot_height)
-#                 pygame.draw.circle(scatter_plot_surface, (0, 0, 50), (x10, y10), math.sqrt(s10[i]*(2*window+1))*plot_height/(3*time_range))
-
-#             # window = 4
-#             # a4, s4 = centered_stats(solve_times,window)
-#             # # Draw average of 5 points
-#             # for i, a4t in enumerate(a4):
-#             #     x4 = plot_border + int(i * (plot_width / (num_solves - 1)))
-#             #     y4 = plot_border + int((1 - (a4t - min_time) / time_range) * plot_height)
-#             #     pygame.draw.circle(scatter_plot_surface, (0, 0, 50), (x4, y4), math.sqrt(s4[i]*(2*window+1))*plot_height/(3*time_range))
-
-#             # window = 3
-#             # a3, s3 = centered_stats(solve_times,window)
-#             # # Draw average of 5 points
-#             # for i, a3t in enumerate(a3):
-#             #     x3 = plot_border + int(i * (plot_width / (num_solves - 1)))
-#             #     y3 = plot_border + int((1 - (a3t - min_time) / time_range) * plot_height)
-#             #     pygame.draw.circle(scatter_plot_surface, (0, 0, 100), (x3, y3), math.sqrt(s3[i]*(2*window+1))*plot_height/(3*time_range))
-
-#             # window = 2
-#             # a5, s5 = centered_stats(solve_times,window)
-#             # # Draw average of 5 points
-#             # for i, a5t in enumerate(a5):
-#             #     x5 = plot_border + int(i * (plot_width / (num_solves - 1)))
-#             #     y5 = plot_border + int((1 - (a5t - min_time) / time_range) * plot_height)
-#             #     pygame.draw.circle(scatter_plot_surface, (0, 0, 150), (x5, y5), math.sqrt(s5[i]*(2*window+1))*plot_height/(3*time_range))
-
-#             window = 1
-#             a1, s1 = centered_stats(solve_times,window)
-#             # Draw average of 5 points
-#             for i, a1t in enumerate(a1):
-#                 x1 = plot_border + int(i * (plot_width / (num_solves - 1)))
-#                 y1 = plot_border + int((1 - (a1t - min_time) / time_range) * plot_height)
-#                 pygame.draw.circle(scatter_plot_surface, (0, 0, 200), (x1, y1), math.sqrt(s1[i]*(2*window+1))*plot_height/(3*time_range))
-            
-
-            
-#             # Draw lines every 5 seconds
-#             for i in range(0, int(max_time), 5):
-#                 y = plot_border + int((1 - (i - min_time) / time_range) * plot_height)
-#                 color = (100, 100, 100) if i == 15 else (100, 100, 100)
-#                 pygame.draw.line(scatter_plot_surface, color, (plot_border, y), (plot_width, y), 1)
-#                 label_text = LABEL_FONT.render(str(i), True, WHITE)
-#                 scatter_plot_surface.blit(label_text, (0, y))
-
-#             # Draw points
-#             for i, solve_time in enumerate(solve_times):
-#                 x = plot_border + int(i * (plot_width / (num_solves - 1)))
-#                 y = plot_border + int((1 - (solve_time - min_time) / time_range) * plot_height)
-#                 pygame.draw.circle(scatter_plot_surface, (255, 255, 255), (x, y), point_radius)
+def draw_points(surface, ctx, values):
+    for i, v in enumerate(values):
+        pygame.draw.circle(surface, WHITE,(ctx.x(i), ctx.y(v)), 4)
 
 
+def draw_std_boxes(surface, ctx, values, window):
+    for i in range(0, len(values), window):
+        w = values[max(0,i-window):i]
+        if not w: continue
+        mean = sum(w)/len(w)
+        std = math.sqrt(sum((x-mean)**2 for x in w)/len(w))
+
+        x1 = ctx.x(max(0,i-window))+1
+        x2 = ctx.x(i)-1
+        y1 = ctx.y(mean + std)
+        y2 = ctx.y(mean - std)
+
+        pygame.draw.rect(surface, AVG_COLOR,(x1, y1, x2-x1, y2-y1), 0, border_radius=min(math.ceil((y2-y1)/2),10))
 
 
-                
-
-#         # Update cached size and data
-#         last_scatter_size = (scatter_rect.width, scatter_rect.height)
-#         last_session_list = list(session_list)
-
-#     # Blit the cached scatterplot onto the screen
-#     screen.blit(scatter_plot_surface, (scatter_rect.x, scatter_rect.y))
-
-
-###################################################################################################
-###################################################################################################
-### new edited version (rectangles)
-
-# def centered_stats(lst, n):
-#     averages = []
-#     stddevs = []
-#     length = len(lst)
-#     for i in range(length):
-#         # Window bounds
-#         start = max(0, i - n)
-#         end   = min(length, i + n + 1)
-#         window = lst[start:end]
-#         mean = sum(window) / len(window)
-#         # Standard deviation
-#         variance = sum((x - mean)**2 for x in window) / len(window)
-#         std = math.sqrt(variance)
-#         print("mean ")
-#         print(mean)
-#         print("std ")
-#         print(std)
-#         # Store results
-#         averages.append(mean)
-#         stddevs.append(std)
-#     return averages, stddevs
+def draw_competition_ao5(surface, ctx, ao5_vals):
+    points = []
+    for i, v in enumerate(ao5_vals):
+        points.append((ctx.x(i+4), ctx.y(v)))
+        pygame.draw.circle(surface, ORANGE1,(ctx.x(i+4), ctx.y(v)), 5)
+    if len(points)>1:
+        pygame.draw.lines(surface,ORANGE1,False,points,3)
 
 
-# def draw_scatterplot_cached(screen, scatter_rect, session_list):
-#     global scatter_plot_surface, last_scatter_size, last_session_list
-#     # Check if we need to rebuild the scatterplot surface
-#     if (scatter_plot_surface is None or (scatter_rect.width, scatter_rect.height) != last_scatter_size or session_list != last_session_list):
-#         print("Rebuilding scatterplot surface")
-#         scatter_plot_surface = pygame.Surface((scatter_rect.width, scatter_rect.height))
-#         scatter_plot_surface.fill(BLACK)  # Fill with black or another background
-#         # Build the scatterplot on scatter_plot_surface
-#         if len(session_list) > 1:
-#             # Extract the solve times
-#             solve_times = [time for _, time, _ in session_list]
-#             num_solves = len(solve_times)
-#             # Determine the scale of the plot
-#             max_time = 30 # max(solve_times)
-#             min_time = 0 #min(solve_times)
-#             time_range = max_time - min_time
-#             if time_range == 0:
-#                 time_range = 1
-#             plot_border = 10
-#             plot_width = scatter_rect.width - 2*plot_border
-#             plot_height = scatter_rect.height - 2*plot_border
-#             point_radius = 5
+def draw():
+    pass
 
 
-
-#             # window = 5
-#             # a10, s10 = centered_stats(solve_times,window)
-#             # # Draw average of 5 points
-#             # for i, a10t in enumerate(a10):
-#             #     x10 = plot_border + int(i * (plot_width / (num_solves - 1)))
-#             #     y10 = plot_border + int((1 - (a10t - min_time) / time_range) * plot_height)
-#             #     pygame.draw.circle(scatter_plot_surface, (0, 0, 25), (x10, y10), math.sqrt(s10[i]*(2*window+1))*plot_height/time_range)
+def draw():
+    pass
 
 
-#             w = 5
-#             #a10, s10 = centered_stats(solve_times,window)
-#             # Draw boxes
-#             for i in range(0, int(num_solves), w):
-#                 start = max(0, i-w)
-#                 end   = min(num_solves, i)
-#                 window = solve_times[start:end]
-#                 if len(window) > 0:
-#                     mean = sum(window) / len(window)
-#                     variance = sum((x - mean)**2 for x in window) / len(window)
-#                 else:
-#                     mean = 0
-#                     variance = 0
-#                 # Standard deviation
-#                 std = math.sqrt(variance)
-#                 print("i: ", i, " mean: ",mean," var: ",variance)
-#                 x20left = plot_border + int((start) * (plot_width / (num_solves - 1)))
-#                 x20right = plot_border + int((end) * (plot_width / (num_solves - 1)))
-#                 y20top = plot_border + int((1 - (mean + std - min_time) / time_range) * plot_height)
-#                 y20bot = plot_border + int((1 - (mean - std - min_time) / time_range) * plot_height)
-#                 pygame.draw.rect(scatter_plot_surface, (100, 100, 100), (x20left,y20top,abs(x20right-x20left),abs(y20top-y20bot)),0)
-
-
-            
-
-            
-#             # Draw lines every 5 seconds
-#             for i in range(0, int(max_time), 5):
-#                 y = plot_border + int((1 - (i - min_time) / time_range) * plot_height)
-#                 color = (100, 100, 100) if i == 15 else (100, 100, 100)
-#                 pygame.draw.line(scatter_plot_surface, color, (plot_border, y), (plot_width, y), 1)
-#                 label_text = LABEL_FONT.render(str(i), True, WHITE)
-#                 scatter_plot_surface.blit(label_text, (0, y))
-
-#             # Draw points
-#             for i, solve_time in enumerate(solve_times):
-#                 x = plot_border + int(i * (plot_width / (num_solves - 1)))
-#                 y = plot_border + int((1 - (solve_time - min_time) / time_range) * plot_height)
-#                 pygame.draw.circle(scatter_plot_surface, (255, 255, 255), (x, y), point_radius)
-
-
-
-
-                
-
-#         # Update cached size and data
-#         last_scatter_size = (scatter_rect.width, scatter_rect.height)
-#         last_session_list = list(session_list)
-
-#     # Blit the cached scatterplot onto the screen
-#     screen.blit(scatter_plot_surface, (scatter_rect.x, scatter_rect.y))
-
-##############################################################################################################
-###################################################################################################
-###################################################################################################
-### new edited version (rectangles)
-
-def centered_stats(lst, n):
-    averages = []
-    stddevs = []
-    length = len(lst)
-    for i in range(length):
-        # Window bounds
-        start = max(0, i - n)
-        end   = min(length, i + n + 1)
-        window = lst[start:end]
-        mean = sum(window) / len(window)
-        # Standard deviation
-        variance = sum((x - mean)**2 for x in window) / len(window)
-        std = math.sqrt(variance)
-        print("mean ")
-        print(mean)
-        print("std ")
-        print(std)
-        # Store results
-        averages.append(mean)
-        stddevs.append(std)
-    return averages, stddevs
-
-def competition_average(lst):
-    averages = []
-    stddevs = []
-    length = len(lst)
-    for i in range(length):
-        if i > 3 and i<length:
-            # Window bounds
-            start = max(0, i - 5)
-            end   = i
-            window = lst[start:end]
-            mean = (sum(window)-max(window)-min(window)) / (len(window)-2)
-            # Store results
-            averages.append(mean)
-    return averages
-
+######################################################################################################################
 
 def draw_scatterplot_cached(screen, scatter_rect, session_list):
     global scatter_plot_surface, last_scatter_size, last_session_list
     # Check if we need to rebuild the scatterplot surface
-    if (scatter_plot_surface is None or (scatter_rect.width, scatter_rect.height) != last_scatter_size or session_list != last_session_list):
+    if (scatter_plot_surface is None or scatter_rect.size != last_scatter_size or session_list != last_session_list):
         print("Rebuilding scatterplot surface")
-        scatter_plot_surface = pygame.Surface((scatter_rect.width, scatter_rect.height))
-        scatter_plot_surface.fill(BLACK)  # Fill with black or another background
+        scatter_plot_surface = pygame.Surface(scatter_rect.size)
+        scatter_plot_surface.fill(FG_COLOR)  # Fill with black or another background
         # Build the scatterplot on scatter_plot_surface
-        if len(session_list) > 1:
-            # Extract the solve times
-            solve_times = [time for _, time, _ in session_list]
-            num_solves = len(solve_times)
-            # Determine the scale of the plot
-            max_time = 30 # max(solve_times)
-            min_time = 0 #min(solve_times)
-            time_range = max_time - min_time
-            if time_range == 0:
-                time_range = 1
-            plot_border = 10
-            plot_width = scatter_rect.width - 2*plot_border
-            plot_height = scatter_rect.height - 2*plot_border
-            point_radius = 5
+        #if len(session_list) > 1:
+        # Extract the solve times
+        solve_times = [time for _, time, _ in session_list]
+        ctx = PlotContext(scatter_rect, 0, 30, len(solve_times))
 
+        draw_grid(scatter_plot_surface, ctx)
+        draw_std_boxes(scatter_plot_surface, ctx, solve_times, window=10)
+        draw_points(scatter_plot_surface, ctx, solve_times)
+        draw_competition_ao5(scatter_plot_surface, ctx, ao5(solve_times))
 
-
-            # window = 5
-            # a10, s10 = centered_stats(solve_times,window)
-            # # Draw average of 5 points
-            # for i, a10t in enumerate(a10):
-            #     x10 = plot_border + int(i * (plot_width / (num_solves - 1)))
-            #     y10 = plot_border + int((1 - (a10t - min_time) / time_range) * plot_height)
-            #     pygame.draw.circle(scatter_plot_surface, (0, 0, 25), (x10, y10), math.sqrt(s10[i]*(2*window+1))*plot_height/time_range)
-
-
-
-            w = 5
-            #a10, s10 = centered_stats(solve_times,window)
-            # Draw boxes
-            for i in range(0, int(num_solves), w):
-                start = max(0, i-w)
-                end   = min(num_solves, i)
-                window = solve_times[start:end]
-                if len(window) > 0:
-                    mean = sum(window) / len(window)
-                    variance = sum((x - mean)**2 for x in window) / len(window)
-                else:
-                    mean = 0
-                    variance = 0
-                # Standard deviation
-                std = math.sqrt(variance)
-                print("i: ", i, " mean: ",mean," var: ",variance)
-                x20left = plot_border + int((start) * (plot_width / (num_solves - 1)))
-                x20right = plot_border + int((end) * (plot_width / (num_solves - 1)))
-                y20top = plot_border + int((1 - (mean + std - min_time) / time_range) * plot_height)
-                y20bot = plot_border + int((1 - (mean - std - min_time) / time_range) * plot_height)
-                pygame.draw.rect(scatter_plot_surface, (100, 100, 100), (x20left,y20top,abs(x20right-x20left),abs(y20top-y20bot)),0)
-
-
-            aC = competition_average(solve_times)
-            # draw avg points
-            for i, a in enumerate(aC):
-                x = plot_border + int(i * (plot_width / (num_solves - 1)))
-                y = plot_border + int((1 - (a - min_time) / time_range) * plot_height)
-                pygame.draw.circle(scatter_plot_surface, (255, 0, 0), (x, y), point_radius)
-
-            
-            # Draw lines every 5 seconds
-            for i in range(0, int(max_time), 5):
-                y = plot_border + int((1 - (i - min_time) / time_range) * plot_height)
-                color = (100, 100, 100) if i == 15 else (100, 100, 100)
-                pygame.draw.line(scatter_plot_surface, color, (plot_border, y), (plot_width, y), 1)
-                label_text = LABEL_FONT.render(str(i), True, WHITE)
-                scatter_plot_surface.blit(label_text, (0, y))
-
-            # Draw points
-            for i, solve_time in enumerate(solve_times):
-                x = plot_border + int(i * (plot_width / (num_solves - 1)))
-                y = plot_border + int((1 - (solve_time - min_time) / time_range) * plot_height)
-                pygame.draw.circle(scatter_plot_surface, (255, 255, 255), (x, y), point_radius)
-
-
-
-
-                
-
-        # Update cached size and data
-        last_scatter_size = (scatter_rect.width, scatter_rect.height)
+        last_scatter_size = scatter_rect.size
         last_session_list = list(session_list)
 
     # Blit the cached scatterplot onto the screen
-    screen.blit(scatter_plot_surface, (scatter_rect.x, scatter_rect.y))
+    screen.blit(scatter_plot_surface, scatter_rect.topleft)
 
-##############################################################################################################
-
+######################################################################################################################
 
 # Timer instance
 timer = CubeTimer()
 countdown = 15
 countdown_started = False
 countdown_start_time = None
-background_color = DARK
+timer_bg_color = FG_COLOR
 timer_running = False
 countdown_time = countdown
 
 # Session list to store times
 session_list = []
+#####################################################
+#####################################################
+
+def load_session_data(filepath):
+    session_list = []
+
+    if not os.path.exists(filepath):
+        print("doesnt exist")
+        return session_list
+
+    with open(filepath, "r") as f:
+        print("did exist")
+        for line in f:
+            #print("before line.strip")
+            line = line.strip()
+            #print(line)
+            if not line:
+                #print("not line")
+                continue
+
+            try:
+                #print("after try, before code")
+                stuff = line.split(",", 2)
+                timestamp = stuff[0]
+                duration = stuff[1]
+                comment = stuff[2]
+                #print(stuff)
+                # print(timestamp)
+                # print(duration)
+                # print(comment)
+                session_list.append((timestamp, float(duration), comment))
+                #print("after try, after code")
+            except ValueError:
+                # Skip malformed lines
+                continue
+
+    return session_list
+
+last_session_list = load_session_data(DATA_FILE)
+session_list = last_session_list
+#print(session_list)
+#####################################################
+#####################################################
 
 # User comment
 user_comment = ""
@@ -596,10 +301,29 @@ scatter_rect = pygame.Rect(outer_margin, timer_rect.bottom + outer_margin, scree
 comment_rect = pygame.Rect(outer_margin, scatter_rect.bottom + outer_margin, screen_width - 2 * outer_margin, COMMENT_HEIGHT)
 save_button_rect = pygame.Rect(timer_rect.width - 140 + outer_margin, timer_rect.bottom - 40, 140, 40)
 
+def update_sections():
+    # Get screen size for dynamic layout
+    screen_width, screen_height = screen.get_size()
+
+    # Calculate scatter plot height to fill the remaining space
+    scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT - 4 * outer_margin
+
+    # Define rectangles
+    timer_rect = pygame.Rect(outer_margin, outer_margin, screen_width - 2 * outer_margin, TIMER_HEIGHT)
+    scatter_rect = pygame.Rect(outer_margin, timer_rect.bottom + outer_margin, screen_width - 2 * outer_margin, scatter_rect_height)
+    comment_rect = pygame.Rect(outer_margin, scatter_rect.bottom + outer_margin, screen_width - 2 * outer_margin, COMMENT_HEIGHT)
+    save_button_rect = pygame.Rect(timer_rect.width - 140 + outer_margin, timer_rect.bottom - 40, 140, 40)
+    return timer_rect, scatter_rect, comment_rect, save_button_rect
+
+timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
+
+
+
 # Main loop
 running = True
 input_active = False
 while running:
+    timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -620,7 +344,7 @@ while running:
                     countdown_started = False
                     timer_running = False
                     countdown_time = countdown
-                    background_color = DARK
+                    timer_bg_color = FG_COLOR
             elif input_active:
                 if event.key == pygame.K_BACKSPACE:
                     user_comment = user_comment[:-1]
@@ -642,42 +366,46 @@ while running:
         time_passed = time.time() - countdown_start_time
         countdown_time = countdown - time_passed
         if countdown_time <= 0:
-            background_color = RED
+            timer_bg_color = RED
 
     
     # Clear the screen by filling it with the background color
-    screen.fill(DARK)
+    screen.fill(BG_COLOR)
 
     # Draw the outer rectangle for the timer section
-    pygame.draw.rect(screen, BLACK, timer_rect)
+    pygame.draw.rect(screen, BG_COLOR, timer_rect, border_radius = BORDER_RADIUS)
 
     # Initialize time_text with a default value
-    time_text = FONT.render("", True, WHITE)  # Default empty text
+    if len(session_list)>0:
+        time_text = TIMER_FONT.render(f"{session_list[-1][1]}", True, WHITE)  # when idle, show last time
+    else:
+        time_text = TIMER_FONT.render("0.00", True, WHITE)  # Default empty text
 
     # Update time_text based on state
     if countdown_started and not timer_running:
         display_time = int(countdown_time) if countdown_time > 0 else -int(abs(countdown_time))
-        time_text = FONT.render(f"{display_time}", True, WHITE)
+        time_text = TIMER_FONT.render(f"{display_time}", True, WHITE)
     elif timer_running:
-        time_text = FONT.render(f"{timer.get_time()}", True, WHITE)
+        time_text = TIMER_FONT.render(f"{timer.get_time()}", True, WHITE)
 
     # Center the text within the timer rectangle
     text_rect = time_text.get_rect(center=timer_rect.center)
     screen.blit(time_text, text_rect)
 
     # Draw save button at the bottom right inside the timer rectangle
-    pygame.draw.rect(screen, DARK, save_button_rect)
+    pygame.draw.rect(screen, FG_COLOR, save_button_rect,border_radius = BORDER_RADIUS)
     button_text = BUTTON_FONT.render(f"Save ({len(session_list)})", True, WHITE)
     screen.blit(button_text, (save_button_rect.x + 15, save_button_rect.y + 10))
 
     # Draw the outer rectangle for the scatter plot section
-    pygame.draw.rect(screen, BLACK, scatter_rect)
+    pygame.draw.rect(screen, FG_COLOR, scatter_rect, border_radius = BORDER_RADIUS)
 
     # Draw scatter plot inside the scatter_rect
-    draw_scatterplot_cached(screen, scatter_rect, session_list)
+    shrunken_rect = scatter_rect.inflate(-outer_margin*2,-outer_margin*2)
+    draw_scatterplot_cached(screen, shrunken_rect, session_list)
 
     # Draw the outer rectangle for the comment section
-    pygame.draw.rect(screen, BLACK, comment_rect)
+    pygame.draw.rect(screen, BG_COLOR, comment_rect, border_radius = BORDER_RADIUS)
 
     # Render the comment text
     comment_text = INPUT_FONT.render(user_comment, True, WHITE)
