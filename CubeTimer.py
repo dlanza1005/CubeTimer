@@ -1,5 +1,5 @@
 # David Lanza
-# 12/19/25
+# 12/9/25
 # Rubiks Cube Timer Program Requirements:
 #   -be a very clear graph that is very clear that it is a graph
 #   -must look good!
@@ -16,15 +16,15 @@
 #   -should be able to delete solves
 #   -move countdown functionality into the timer class?
 
-
-###########################
-## this was the old heading info on this file when it was made:
-# David Lanza
-# GPT 4o
-# 8-23-24
-# rubiks cube timer program
-###########################
-
+# 12-15-25
+#   -when typing a comment, clicking the plot area should give program attention back to the timer.
+#   -wrap text in a comment. Change the size of the plot area to accommodate, perhaps?
+#   -mousing over the comp_ao5 and avg of 20 should show name of the stat and value, as well as highlight the points that it is averaging (?)
+#   -need an x axis label!!
+#   -maybe innstead of deleting data points, put a flag for "deleted" and if it is deleted, it could be undone..
+#   -the comment field should clear itself after each solve.
+#   -tailor the size of the save button to the size of the text object. Also make sure it is drawn before the timer itself so the timer is on top.
+#   -backspace should work while being held down not just when pressed…
 
 
 import pygame
@@ -74,6 +74,8 @@ scatter_plot_surface = None
 histogram_surface = None
 last_scatter_size = (0, 0)
 last_session_list = []
+hovered_point_index = None
+scatter_point_hits = []
 
 # Timer class
 class CubeTimer:
@@ -174,8 +176,8 @@ def draw_points(surface, ctx, values):
     global scatter_point_hits
     scatter_point_hits = []
 
-    radius = 6
-    hit_radius = 10  # easier to click
+    radius = 5
+    hit_radius = radius*2  # easier to click
 
     for i, v in enumerate(values):
         x = ctx.x(i)
@@ -184,12 +186,7 @@ def draw_points(surface, ctx, values):
         pygame.draw.circle(surface, WHITE, (x, y), radius)
 
         # store clickable region
-        hitbox = pygame.Rect(
-            x - hit_radius,
-            y - hit_radius,
-            hit_radius * 2,
-            hit_radius * 2
-        )
+        hitbox = pygame.Rect( x - hit_radius, y - hit_radius, hit_radius * 2, hit_radius * 2)
         scatter_point_hits.append((i, hitbox))
 
 
@@ -224,6 +221,33 @@ def draw():
 def draw():
     pass
 
+def draw_tooltip(screen, pos, text_lines):
+    padding = 6
+    line_height = 18
+
+    rendered = [LABEL_FONT.render(t, True, WHITE) for t in text_lines]
+
+    width = max(r.get_width() for r in rendered) + padding * 2
+    height = len(rendered) * line_height + padding * 2
+
+    x, y = pos
+    x += 12  # offset from cursor
+    y += 12
+
+    # Keep tooltip on screen
+    screen_rect = screen.get_rect()
+    if x + width > screen_rect.right:
+        x -= width
+    if y + height > screen_rect.bottom:
+        y -= height
+
+    bg_rect = pygame.Rect(x, y, width, height)
+
+    pygame.draw.rect(screen, ORANGE1, bg_rect)
+    pygame.draw.rect(screen, ORANGE3, bg_rect, 2)
+
+    for i, surf in enumerate(rendered):
+        screen.blit( surf, (x + padding, y + padding + i * line_height))
 
 ######################################################################################################################
 
@@ -287,8 +311,8 @@ def load_session_data(filepath):
                 continue
     return session_list
 
-#last_session_list = load_session_data(DATA_FILE)
-#session_list = last_session_list
+# last_session_list = load_session_data(DATA_FILE)
+# session_list = last_session_list
 #print(session_list)
 #####################################################
 #####################################################
@@ -387,6 +411,14 @@ while running:
                     user_comment = user_comment[:-1]
                 else:
                     user_comment += event.unicode
+        elif event.type == pygame.MOUSEMOTION:
+            hovered_point_index = None
+            if scatter_rect.collidepoint(event.pos):
+                local_pos = (event.pos[0] - scatter_rect.x, event.pos[1] - scatter_rect.y)
+                for i, hitbox in scatter_point_hits:
+                    if hitbox.collidepoint(local_pos):
+                        hovered_point_index = i
+                        break
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if save_button_rect.collidepoint(event.pos):
                 with open(DATA_FILE, "a") as f:
@@ -401,9 +433,11 @@ while running:
                 for i, hitbox in scatter_point_hits:
                     if hitbox.collidepoint((local_x, local_y)):
                         del session_list[i]
+                        hovered_point_index = None
                         break
             else:
                 input_active = False
+        
 
     # Handle countdown
     if countdown_started and not timer_running:
@@ -454,6 +488,14 @@ while running:
     # Render the comment text
     comment_text = INPUT_FONT.render(user_comment, True, WHITE)
     screen.blit(comment_text, (comment_rect.x + 10, comment_rect.y + 10))
+
+    if hovered_point_index is not None and 0 <= hovered_point_index < len(session_list):
+        timestamp, duration, comment = session_list[hovered_point_index]
+        lines = [f"{duration:.2f}"]
+        if comment.strip():
+            lines.append(comment)
+        draw_tooltip(screen, pygame.mouse.get_pos(), lines)
+
 
     pygame.display.flip()
 
