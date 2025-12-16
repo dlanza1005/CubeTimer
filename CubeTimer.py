@@ -17,13 +17,14 @@
 #   -move countdown functionality into the timer class?
 
 # 12-15-25
-#   -when typing a comment, clicking the plot area should give program attention back to the timer.
-#   -wrap text in a comment. Change the size of the plot area to accommodate, perhaps?
+#   x-when typing a comment, clicking the plot area should give program attention back to the timer.
+#   x-wrap text in a comment. Change the size of the plot area to accommodate, perhaps?
 #   -mousing over the comp_ao5 and avg of 20 should show name of the stat and value, as well as highlight the points that it is averaging (?)
 #   -need an x axis label!!
 #   -maybe innstead of deleting data points, put a flag for "deleted" and if it is deleted, it could be undone..
-#   -the comment field should clear itself after each solve.
-#   -tailor the size of the save button to the size of the text object. Also make sure it is drawn before the timer itself so the timer is on top.
+#   x-the comment field should clear itself after each solve.
+#   x-tailor the size of the save button to the size of the text object. 
+#   x-make sure save button is drawn before the timer itself so the timer is on top.
 #   -backspace should work while being held down not just when pressed…
 
 
@@ -56,7 +57,9 @@ AVG_COLOR = ORANGE3
 TIMER_FONT = pygame.font.SysFont('Courier', 60, bold = True)
 LABEL_FONT = pygame.font.SysFont('Courier', 20, bold = True)
 BUTTON_FONT = pygame.font.SysFont('Courier', 20, bold = True)
+button_text = BUTTON_FONT.render(f"Save", True, WHITE)
 INPUT_FONT = pygame.font.SysFont('Courier', 20, bold = True)
+comment_text = INPUT_FONT.render(f".", True, WHITE)
 
 # Fixed heights for timer and comment boxes
 TIMER_HEIGHT = 100 # pixels
@@ -221,6 +224,34 @@ def draw():
 def draw():
     pass
 
+
+def render_wrapped_text(text, font, color, max_width):
+    words = text.split(" ")
+    lines = []
+    current_line = ""
+    for word in words:
+        test_line = current_line + (" " if current_line else "") + word
+        test_width, _ = font.size(test_line)
+
+        if test_width <= max_width:
+            current_line = test_line
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    line_surfaces = [font.render(line, True, color) for line in lines]
+    line_height = font.get_linesize()
+
+    total_height = line_height * len(line_surfaces)
+    surface = pygame.Surface((max_width, total_height), pygame.SRCALPHA)
+    y = 0
+    for line_surf in line_surfaces:
+        surface.blit(line_surf, (0, y))
+        y += line_height
+    return surface
+
+
 def draw_tooltip(screen, pos, text_lines):
     padding = 6
     line_height = 18
@@ -286,8 +317,8 @@ countdown_time = countdown
 
 # Session list to store times
 session_list = []
-#####################################################
-#####################################################
+###############################################
+###############################################
 
 def load_session_data(filepath):
     session_list = []
@@ -314,8 +345,8 @@ def load_session_data(filepath):
 # last_session_list = load_session_data(DATA_FILE)
 # session_list = last_session_list
 #print(session_list)
-#####################################################
-#####################################################
+###############################################
+###############################################
 
 # User comment
 user_comment = ""
@@ -324,27 +355,31 @@ user_comment = ""
 screen_width, screen_height = screen.get_size()
 
 #####################################################
+COMMENT_WIDTH = screen_width - 2*outer_margin
+COMMENT_HEIGHT = comment_text.get_height()+2*outer_margin
 # Calculate scatter plot height to fill the remaining space
 scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT - 4 * outer_margin
 
 # Define rectangles
 timer_rect = pygame.Rect(outer_margin, outer_margin, screen_width - 2 * outer_margin, TIMER_HEIGHT)
 scatter_rect = pygame.Rect(outer_margin, timer_rect.bottom + outer_margin, screen_width - 2 * outer_margin, scatter_rect_height)
-comment_rect = pygame.Rect(outer_margin, scatter_rect.bottom + outer_margin, screen_width - 2 * outer_margin, COMMENT_HEIGHT)
-save_button_rect = pygame.Rect(timer_rect.width - 140 + outer_margin, timer_rect.bottom - 40, 140, 40)
+comment_rect = pygame.Rect(outer_margin, screen_height-outer_margin-COMMENT_HEIGHT, COMMENT_WIDTH, COMMENT_HEIGHT)
+save_button_rect = pygame.Rect(timer_rect.width - button_text.get_width() - outer_margin, timer_rect.height - button_text.get_height()-2*outer_margin, button_text.get_width()+2*outer_margin, button_text.get_height()+2*outer_margin)
 
 def update_sections():
     # Get screen size for dynamic layout
     screen_width, screen_height = screen.get_size()
 
+    COMMENT_WIDTH = screen_width - 2*outer_margin
+    COMMENT_HEIGHT = comment_text.get_height()+2*outer_margin
     # Calculate scatter plot height to fill the remaining space
     scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT - 4 * outer_margin
 
     # Define rectangles
     timer_rect = pygame.Rect(outer_margin, outer_margin, screen_width - 2 * outer_margin, TIMER_HEIGHT)
     scatter_rect = pygame.Rect(outer_margin, timer_rect.bottom + outer_margin, screen_width - 2 * outer_margin, scatter_rect_height)
-    comment_rect = pygame.Rect(outer_margin, scatter_rect.bottom + outer_margin, screen_width - 2 * outer_margin, COMMENT_HEIGHT)
-    save_button_rect = pygame.Rect(timer_rect.width - 140 + outer_margin, timer_rect.bottom - 40, 140, 40)
+    comment_rect = pygame.Rect(outer_margin, screen_height-outer_margin-COMMENT_HEIGHT, COMMENT_WIDTH, COMMENT_HEIGHT)
+    save_button_rect = pygame.Rect(timer_rect.width - button_text.get_width() - outer_margin, timer_rect.height - button_text.get_height()-2*outer_margin, button_text.get_width()+2*outer_margin, button_text.get_height()+2*outer_margin)
     return timer_rect, scatter_rect, comment_rect, save_button_rect
 
 timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
@@ -402,6 +437,7 @@ while running:
                     start_timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timer.start_time))
                     session_list.append((start_timestamp, elapsed_time, user_comment))
                     print(f"Duration: {elapsed_time}, Comment: {user_comment}")
+                    user_comment = ""
                     countdown_started = False
                     timer_running = False
                     countdown_time = countdown
@@ -428,6 +464,7 @@ while running:
             elif comment_rect.collidepoint(event.pos):
                 input_active = True
             elif scatter_rect.collidepoint(event.pos):
+                input_active = False
                 local_x = event.pos[0] - scatter_rect.x
                 local_y = event.pos[1] - scatter_rect.y
                 for i, hitbox in scatter_point_hits:
@@ -453,6 +490,11 @@ while running:
     # Draw the outer rectangle for the timer section
     pygame.draw.rect(screen, BG_COLOR, timer_rect, border_radius = BORDER_RADIUS)
 
+    # Draw save button at the bottom right inside the timer rectangle
+    pygame.draw.rect(screen, FG_COLOR, save_button_rect,border_radius = BORDER_RADIUS)
+    button_text = BUTTON_FONT.render(f"Save ({len(session_list)})", True, WHITE)
+    screen.blit(button_text, (save_button_rect.x+outer_margin, save_button_rect.y+outer_margin))
+
     # Initialize time_text with a default value
     if len(session_list)>0:
         time_text = TIMER_FONT.render(f"{session_list[-1][1]}", True, WHITE)  # when idle, show last time
@@ -470,10 +512,7 @@ while running:
     text_rect = time_text.get_rect(center=timer_rect.center)
     screen.blit(time_text, text_rect)
 
-    # Draw save button at the bottom right inside the timer rectangle
-    pygame.draw.rect(screen, FG_COLOR, save_button_rect,border_radius = BORDER_RADIUS)
-    button_text = BUTTON_FONT.render(f"Save ({len(session_list)})", True, WHITE)
-    screen.blit(button_text, (save_button_rect.x + 15, save_button_rect.y + 10))
+
 
     # Draw the outer rectangle for the scatter plot section
     pygame.draw.rect(screen, FG_COLOR, scatter_rect, border_radius = BORDER_RADIUS)
@@ -483,11 +522,12 @@ while running:
     draw_scatterplot_cached(screen, shrunken_rect, session_list)
 
     # Draw the outer rectangle for the comment section
-    pygame.draw.rect(screen, BG_COLOR, comment_rect, border_radius = BORDER_RADIUS)
+    pygame.draw.rect(screen, FG_COLOR, comment_rect, border_radius = BORDER_RADIUS)
 
     # Render the comment text
-    comment_text = INPUT_FONT.render(user_comment, True, WHITE)
-    screen.blit(comment_text, (comment_rect.x + 10, comment_rect.y + 10))
+    #comment_text = INPUT_FONT.render(user_comment, True, WHITE)
+    comment_text = render_wrapped_text(user_comment, INPUT_FONT, WHITE, comment_rect.width-2*outer_margin)
+    screen.blit(comment_text, (comment_rect.x + outer_margin, comment_rect.y + outer_margin))
 
     if hovered_point_index is not None and 0 <= hovered_point_index < len(session_list):
         timestamp, duration, comment = session_list[hovered_point_index]
