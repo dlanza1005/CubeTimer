@@ -78,7 +78,11 @@ histogram_surface = None
 last_scatter_size = (0, 0)
 last_session_list = []
 hovered_point_index = None
-scatter_point_hits = []
+scatter_point_hits = [] # remove
+# hover_items_list = []
+# hover_points = []
+# hover_ao5s = []
+# hover_boxes = []
 
 # Timer class
 class CubeTimer:
@@ -172,12 +176,11 @@ def draw_grid(surface, ctx, step=5):
         surface.blit(label, label_rect)
 
 
-# def draw_points(surface, ctx, values):
-#     for i, v in enumerate(values):
-#         pygame.draw.circle(surface, WHITE,(ctx.x(i), ctx.y(v)), 4)
 def draw_points(surface, ctx, values):
     global scatter_point_hits
     scatter_point_hits = []
+    # global hover_points
+    # hover_points = []
 
     radius = 5
     hit_radius = radius*2  # easier to click
@@ -190,10 +193,15 @@ def draw_points(surface, ctx, values):
 
         # store clickable region
         hitbox = pygame.Rect( x - hit_radius, y - hit_radius, hit_radius * 2, hit_radius * 2)
-        scatter_point_hits.append((i, hitbox))
+        scatter_point_hits.append((i, hitbox)) # remove?
+        # hovered = False
+        # hover_points.append((i, hitbox, hovered)) # priority, index, hitbox
 
 
 def draw_std_boxes(surface, ctx, values, window):
+    # global hover_boxes
+    # hover_boxes = []
+
     for i in range(0, len(values), window):
         w = values[max(0,i-window):i]
         if not w: continue
@@ -206,13 +214,25 @@ def draw_std_boxes(surface, ctx, values, window):
         y2 = ctx.y(mean - std)
 
         pygame.draw.rect(surface, AVG_COLOR,(x1, y1, x2-x1, y2-y1), 0, border_radius=min(math.ceil((y2-y1)/2),10))
-
+        # # store clickable region
+        # hitbox = pygame.Rect( x1, y1, x2-x1, x2-x1)
+        # hovered = False
+        # hover_boxes.append((i, hitbox, hovered)) # priority, index, hitbox
 
 def draw_competition_ao5(surface, ctx, ao5_vals):
+    # global hover_ao5s
+    # hover_ao5s = []
     points = []
+    hit_radius = 5
     for i, v in enumerate(ao5_vals):
-        points.append((ctx.x(i+4), ctx.y(v)))
-        pygame.draw.circle(surface, ORANGE1,(ctx.x(i+4), ctx.y(v)), 5)
+        x = ctx.x(i+4)
+        y = ctx.y(v)
+        points.append((x, y))
+        pygame.draw.circle(surface, ORANGE1,(x, y), hit_radius)
+        # # store clickable region
+        # hitbox = pygame.Rect( x - hit_radius, y - hit_radius, hit_radius * 2, hit_radius * 2)
+        # hovered = False
+        # hover_ao5s.append((i, hitbox, hovered)) # priority, index, hitbox
     if len(points)>1:
         pygame.draw.lines(surface,ORANGE1,False,points,3)
 
@@ -351,20 +371,18 @@ def load_session_data(filepath):
 # User comment
 user_comment = ""
 
+#####################################################
 # Get screen size for dynamic layout
 screen_width, screen_height = screen.get_size()
 
-#####################################################
-COMMENT_WIDTH = screen_width - 2*outer_margin
-COMMENT_HEIGHT = comment_text.get_height()+2*outer_margin
-# Calculate scatter plot height to fill the remaining space
-scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT - 4 * outer_margin
-
-# Define rectangles
-timer_rect = pygame.Rect(outer_margin, outer_margin, screen_width - 2 * outer_margin, TIMER_HEIGHT)
-scatter_rect = pygame.Rect(outer_margin, timer_rect.bottom + outer_margin, screen_width - 2 * outer_margin, scatter_rect_height)
-comment_rect = pygame.Rect(outer_margin, screen_height-outer_margin-COMMENT_HEIGHT, COMMENT_WIDTH, COMMENT_HEIGHT)
-save_button_rect = pygame.Rect(timer_rect.width - button_text.get_width() - outer_margin, timer_rect.height - button_text.get_height()-2*outer_margin, button_text.get_width()+2*outer_margin, button_text.get_height()+2*outer_margin)
+# Start everything as 0 or None.
+COMMENT_WIDTH = 0
+COMMENT_HEIGHT = 0
+scatter_rect_height = 0
+timer_rect = None
+scatter_rect = None
+comment_rect = None
+save_button_rect = None
 
 def update_sections():
     # Get screen size for dynamic layout
@@ -383,43 +401,23 @@ def update_sections():
     return timer_rect, scatter_rect, comment_rect, save_button_rect
 
 timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
+
 #####################################################
-# tryinng to remove outer_margin from this.
-# # Calculate scatter plot height to fill the remaining space
-# scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT
 
-# # Define rectangles
-# timer_rect = pygame.Rect(0, 0, screen_width, TIMER_HEIGHT)
-# scatter_rect = pygame.Rect(0, timer_rect.bottom, screen_width, scatter_rect_height)
-# comment_rect = pygame.Rect(0, scatter_rect.bottom, screen_width, COMMENT_HEIGHT)
-# save_button_rect = pygame.Rect(timer_rect.width - 140, timer_rect.bottom - 40, 140, 40)
-
-# def update_sections():
-#     # Get screen size for dynamic layout
-#     screen_width, screen_height = screen.get_size()
-
-#     # Calculate scatter plot height to fill the remaining space
-#     scatter_rect_height = screen_height - TIMER_HEIGHT - COMMENT_HEIGHT
-
-#     # Define rectangles
-#     timer_rect = pygame.Rect(0, 0, screen_width, TIMER_HEIGHT)
-#     timer_rect = timer_rect.inflate(-outer_margin,-outer_margin)
-#     scatter_rect = pygame.Rect(0, timer_rect.bottom, screen_width, scatter_rect_height)
-#     scatter_rect = scatter_rect.inflate(-outer_margin,-outer_margin)
-#     comment_rect = pygame.Rect(0, scatter_rect.bottom, screen_width, COMMENT_HEIGHT)
-#     comment_rect = comment_rect.inflate(-outer_margin,-outer_margin)
-#     save_button_rect = pygame.Rect(timer_rect.width - 140, timer_rect.bottom - 40, 140, 40)
-#     save_button_rect = save_button_rect.inflate(-outer_margin,-outer_margin)
-#     return timer_rect, scatter_rect, comment_rect, save_button_rect
-
-# timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
-#####################################################
 
 # Main loop
 running = True
 input_active = False
+backspacing = False
+BACKSPACE_DELAY = 0.4     # seconds before repeat
+BACKSPACE_REPEAT = 0.05  # seconds between repeats
+backspace_start_time = 0
+last_backspace_time = 0
+
 while running:
     timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
+    pressed = pygame.key.get_pressed()
+    now = time.time()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -444,8 +442,9 @@ while running:
                     timer_bg_color = FG_COLOR
             elif input_active:
                 if event.key == pygame.K_BACKSPACE:
-                    user_comment = user_comment[:-1]
+                    backspacing = True #user_comment = user_comment[:-1]
                 else:
+                    backspacing = False
                     user_comment += event.unicode
         elif event.type == pygame.MOUSEMOTION:
             hovered_point_index = None
@@ -475,6 +474,23 @@ while running:
             else:
                 input_active = False
         
+    if input_active and pressed[pygame.K_BACKSPACE]:
+        #user_comment = user_comment[:-1]
+        if not backspacing:
+            # initial delete
+            user_comment = user_comment[:-1]
+            backspacing = True
+            backspace_start_time = now
+            last_backspace_time = now
+        else:
+            # repeating delete
+            if now - backspace_start_time > BACKSPACE_DELAY:
+                if now - last_backspace_time > BACKSPACE_REPEAT:
+                    user_comment = user_comment[:-1]
+                    last_backspace_time = now
+    else:
+        backspacing = False
+
 
     # Handle countdown
     if countdown_started and not timer_running:
