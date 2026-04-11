@@ -27,6 +27,19 @@
 #   x-make sure save button is drawn before the timer itself so the timer is on top.
 #   -backspace should work while being held down not just when pressed…
 
+# 1-3-26
+#   -tried using this for 4x4 solve. cannot delete solves if the datapoint is off the y axis scale.
+
+# 1-15-26:
+# rubiks cube program changes:
+#   -rectangle mouseover is broken
+#   -make deleting solves safer
+#   -changeable range for Y axis
+#   -fix highlighting and mouseover data (maybe in the future)
+#   -add +2 and DNF buttons?
+#   -see comments on mouseover. edit comments on mouseover.
+
+
 
 import pygame
 import sys
@@ -78,11 +91,14 @@ histogram_surface = None
 last_scatter_size = (0, 0)
 last_session_list = []
 hovered_point_index = None
-scatter_point_hits = [] # remove
-# hover_items_list = []
-# hover_points = []
-# hover_ao5s = []
-# hover_boxes = []
+scatter_point_hitboxes = [] # (index, hitbox)
+ao5_hitboxes = [] # (index, hitbox)
+a10_hitboxes = [] # (index, hitbox)
+hover_targets = []
+highlighted_a10s = []
+highlighted_ao5s = []
+highlighted_points = []
+
 
 # Timer class
 class CubeTimer:
@@ -150,6 +166,7 @@ def rolling_mean_std(values, window):
         stds.append(math.sqrt(var))
     return means, stds
 
+
 def ao5(values):
     out = []
     for i in range(4, len(values)):
@@ -177,10 +194,10 @@ def draw_grid(surface, ctx, step=5):
 
 
 def draw_points(surface, ctx, values):
-    global scatter_point_hits
-    scatter_point_hits = []
-    # global hover_points
-    # hover_points = []
+    global scatter_point_hitboxes
+    scatter_point_hitboxes = []
+    #global hover_targets
+    global highlighted_points
 
     radius = 5
     hit_radius = radius*2  # easier to click
@@ -189,18 +206,28 @@ def draw_points(surface, ctx, values):
         x = ctx.x(i)
         y = ctx.y(v)
 
+        # store clickable region
+        hitbox = pygame.Rect( x - radius, y - radius, hit_radius * 2, hit_radius * 2)
+        scatter_point_hitboxes.append((i, hitbox, v)) # remove?
+        #hover_targets.append(("point", 0, i, hitbox,"tooltip", [i])) # type, priority, index, hitbox, tooltip, highlight
+        if (i, hitbox, v) in highlighted_points:
+            pygame.draw.circle(surface, BLACK, (x, y), radius+2)
         pygame.draw.circle(surface, WHITE, (x, y), radius)
 
-        # store clickable region
-        hitbox = pygame.Rect( x - hit_radius, y - hit_radius, hit_radius * 2, hit_radius * 2)
-        scatter_point_hits.append((i, hitbox)) # remove?
-        # hovered = False
-        # hover_points.append((i, hitbox, hovered)) # priority, index, hitbox
 
+def draw_highlighted_point(surface, ctx, index, value):
+    x = ctx.x(index)
+    y = ctx.y(value)
+    radius = 5
+    pygame.draw.circle(surface, BLACK, (x, y), radius+1)
+    pygame.draw.circle(surface, WHITE, (x, y), radius)
 
 def draw_std_boxes(surface, ctx, values, window):
-    # global hover_boxes
-    # hover_boxes = []
+    global a10_hitboxes
+    a10_hitboxes = []
+    #hover_boxes = []
+    #global hover_targets
+    global highlighted_a10s
 
     for i in range(0, len(values), window):
         w = values[max(0,i-window):i]
@@ -214,31 +241,37 @@ def draw_std_boxes(surface, ctx, values, window):
         y2 = ctx.y(mean - std)
 
         pygame.draw.rect(surface, AVG_COLOR,(x1, y1, x2-x1, y2-y1), 0, border_radius=min(math.ceil((y2-y1)/2),10))
-        # # store clickable region
-        # hitbox = pygame.Rect( x1, y1, x2-x1, x2-x1)
-        # hovered = False
-        # hover_boxes.append((i, hitbox, hovered)) # priority, index, hitbox
+        # store clickable region
+        hitbox = pygame.Rect( x1, y1, x2-x1, x2-x1)
+        a10_hitboxes.append((i, hitbox, mean, std))
+        #hovered = False
+        #hover_targets.append(("a10", 2, i, hitbox, "a10 tooltip", list(range(max(0, i-window), i)))) # type, priority, index, hitbox, tooltip, highlight
+
 
 def draw_competition_ao5(surface, ctx, ao5_vals):
-    # global hover_ao5s
+    global ao5_hitboxes
+    ao5_hitboxes = []
     # hover_ao5s = []
+    #global hover_targets
+    global highlighted_ao5s
+    
     points = []
-    hit_radius = 5
+    radius = 5
+    hit_radius = radius*2  # easier to click
     for i, v in enumerate(ao5_vals):
         x = ctx.x(i+4)
         y = ctx.y(v)
         points.append((x, y))
-        pygame.draw.circle(surface, ORANGE1,(x, y), hit_radius)
-        # # store clickable region
-        # hitbox = pygame.Rect( x - hit_radius, y - hit_radius, hit_radius * 2, hit_radius * 2)
-        # hovered = False
-        # hover_ao5s.append((i, hitbox, hovered)) # priority, index, hitbox
+        
+        # store clickable region
+        hitbox = pygame.Rect( x - radius, y - radius, hit_radius * 2, hit_radius * 2)
+        ao5_hitboxes.append((i, hitbox, v)) 
+        #hover_targets.append(("ao5", 1, i, hitbox, "ao5 tooltip", list(range(i, i + 5)))) # type, priority, index, hitbox, tooltip, highlight
+        if (i, hitbox, v) in highlighted_ao5s:
+            pygame.draw.circle(surface, BLACK,(x, y), radius+2)
+        pygame.draw.circle(surface, ORANGE1,(x, y), radius)
     if len(points)>1:
         pygame.draw.lines(surface,ORANGE1,False,points,3)
-
-
-def draw():
-    pass
 
 
 def draw():
@@ -303,9 +336,9 @@ def draw_tooltip(screen, pos, text_lines):
 ######################################################################################################################
 
 def draw_scatterplot_cached(screen, scatter_rect, session_list):
-    global scatter_plot_surface, last_scatter_size, last_session_list
+    global scatter_plot_surface, last_scatter_size, last_session_list, mouse_hover_change
     # Check if we need to rebuild the scatterplot surface
-    if (scatter_plot_surface is None or scatter_rect.size != last_scatter_size or session_list != last_session_list):
+    if (scatter_plot_surface is None or scatter_rect.size != last_scatter_size or session_list != last_session_list or mouse_hover_change): # or mouse moved
         print("Rebuilding scatterplot surface")
         scatter_plot_surface = pygame.Surface(scatter_rect.size)
         scatter_plot_surface.fill(FG_COLOR)  # Fill with black or another background
@@ -314,12 +347,14 @@ def draw_scatterplot_cached(screen, scatter_rect, session_list):
         ctx = PlotContext(scatter_rect, 0, 30, len(solve_times))
 
         draw_grid(scatter_plot_surface, ctx)
-        draw_std_boxes(scatter_plot_surface, ctx, solve_times, window=10)
+        draw_std_boxes(scatter_plot_surface, ctx, solve_times, window=20)
         draw_points(scatter_plot_surface, ctx, solve_times)
         draw_competition_ao5(scatter_plot_surface, ctx, ao5(solve_times))
 
         last_scatter_size = scatter_rect.size
         last_session_list = list(session_list)
+
+        mouse_hover_change = False
 
     # Blit the cached scatterplot onto the screen
     screen.blit(scatter_plot_surface, scatter_rect.topleft)
@@ -413,6 +448,10 @@ BACKSPACE_DELAY = 0.4     # seconds before repeat
 BACKSPACE_REPEAT = 0.05  # seconds between repeats
 backspace_start_time = 0
 last_backspace_time = 0
+mouse_hover_change = True
+tooltip_point_info = None
+tooltip_ao5_info = None
+tooltip_a10_info = None
 
 while running:
     timer_rect, scatter_rect, comment_rect, save_button_rect = update_sections()
@@ -450,10 +489,7 @@ while running:
             hovered_point_index = None
             if scatter_rect.collidepoint(event.pos):
                 local_pos = (event.pos[0] - scatter_rect.x, event.pos[1] - scatter_rect.y)
-                for i, hitbox in scatter_point_hits:
-                    if hitbox.collidepoint(local_pos):
-                        hovered_point_index = i
-                        break
+                mouse_hover_change = True
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if save_button_rect.collidepoint(event.pos):
                 with open(DATA_FILE, "a") as f:
@@ -466,9 +502,10 @@ while running:
                 input_active = False
                 local_x = event.pos[0] - scatter_rect.x
                 local_y = event.pos[1] - scatter_rect.y
-                for i, hitbox in scatter_point_hits:
+                for i, hitbox, _ in scatter_point_hitboxes:
                     if hitbox.collidepoint((local_x, local_y)):
                         del session_list[i]
+                        mouse_hover_change = False # dont highlight if a point is deleted because all point locations will change
                         hovered_point_index = None
                         break
             else:
@@ -499,7 +536,38 @@ while running:
         if countdown_time <= 0:
             timer_bg_color = RED
 
-    
+
+    # Handle mouse hover highlighting
+    highlighted_points = []
+    highlighted_a10s = []
+    highlighted_ao5s = []
+    #tooltip_info = None
+    if mouse_hover_change:
+        for i, hitbox, mean, std in a10_hitboxes:
+            if hitbox.collidepoint(local_pos):
+                #hovered_point_index = i
+                highlighted_a10s.append((i, hitbox, mean, std))
+                tooltip_a10_info = [pygame.mouse.get_pos(), ["a10 "+f"{mean:.2f}±{std:.2f}"]]
+                break
+            else:
+                tooltip_a10_info = None
+        for i, hitbox, v in ao5_hitboxes:
+            if hitbox.collidepoint(local_pos):
+                # hovered_point_index = i
+                highlighted_ao5s.append((i, hitbox, v))
+                tooltip_ao5_info = [pygame.mouse.get_pos(), ["comp_ao5 "+f"{v:.2f}"]]
+
+                break
+            else:
+                tooltip_ao5_info = None
+        for i, hitbox, v in scatter_point_hitboxes:
+            if hitbox.collidepoint(local_pos):
+                highlighted_points.append((i, hitbox, v))
+                tooltip_point_info = [pygame.mouse.get_pos(), [f"{v:.2f}"]]
+                break
+            else:
+                tooltip_point_info = None
+
     # Clear the screen by filling it with the background color
     screen.fill(BG_COLOR)
 
@@ -528,7 +596,8 @@ while running:
     text_rect = time_text.get_rect(center=timer_rect.center)
     screen.blit(time_text, text_rect)
 
-
+    hovered = None
+    hover_targets = []
 
     # Draw the outer rectangle for the scatter plot section
     pygame.draw.rect(screen, FG_COLOR, scatter_rect, border_radius = BORDER_RADIUS)
@@ -545,14 +614,31 @@ while running:
     comment_text = render_wrapped_text(user_comment, INPUT_FONT, WHITE, comment_rect.width-2*outer_margin)
     screen.blit(comment_text, (comment_rect.x + outer_margin, comment_rect.y + outer_margin))
 
-    if hovered_point_index is not None and 0 <= hovered_point_index < len(session_list):
-        timestamp, duration, comment = session_list[hovered_point_index]
-        lines = [f"{duration:.2f}"]
-        if comment.strip():
-            lines.append(comment)
-        draw_tooltip(screen, pygame.mouse.get_pos(), lines)
+    if tooltip_point_info is not None: # NEED TO ADD COMMENT TOOLTIP
+        draw_tooltip(screen, pygame.mouse.get_pos(), tooltip_point_info[1])
 
+    if tooltip_ao5_info is not None: # need to make this show ao5 value. also where do we designate to highlight the 5 averaged points?
+        draw_tooltip(screen, pygame.mouse.get_pos(), tooltip_ao5_info[1])
 
+    if tooltip_a10_info is not None: 
+        draw_tooltip(screen, pygame.mouse.get_pos(), tooltip_a10_info[1])
+    
+    # for target in hover_targets:
+    #     if target[3].collidepoint(local_pos):
+    #         if hovered is None or target[1] > hovered[1]:
+    #             hovered = target
+    # if hovered:
+    #     draw_tooltip(screen, pygame.mouse.get_pos(), hovered[4])
+
+    # if hovered:
+    #     for i in hovered[5]:
+    #         solve_times = [time for _, time, _ in session_list]
+    #         ctx = PlotContext(shrunken_rect, 0, 30, len(solve_times))
+    #         draw_highlighted_point(screen, ctx, hovered[2], solve_times[hovered[2]])
+
+        
+
+    # hover_targets.append(("ao5", 1, i, hitbox, "ao5 tooltip", list(range(i, i + 5)))) # type, priority, index, hitbox, tooltip, highlight
     pygame.display.flip()
 
 pygame.quit()
