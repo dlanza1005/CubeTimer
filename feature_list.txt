@@ -1,0 +1,26 @@
+CubeTimer — Features
+====================
+Timer
+-Press SPACE to begin inspection countdown (15s)
+-Press SPACE again to start the solve timer
+-Press SPACE again to stop and record the solve
+-Display last solve time when idle
+
+Data
+-Upon timer stop, create a solve datapoint containing [solveStartDateTimestamp, solveDuration, comment, boolDeleted] and append to Session Data.
+-Upon clicking Save, session data is appended to data.txt on disk
+-Delete a solve by clicking its point on the graph [boolDeleted=TRUE]
+
+Graph
+-Scatterplot of all session times
+-Rolling average-of-5 (ao5) line overlay
+-Std deviation boxes per 20-solve window
+-Hover over a point to see its time
+-Hover over ao5/a10 to see stats
+-Resizable window, graph fills available space
+
+
+
+
+Q:
+-is Readme.txt exhaustive, or just covering the major features?

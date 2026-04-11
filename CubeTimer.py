@@ -63,6 +63,7 @@ GREEN = (0,255,0)
 ORANGE1 = (230,80,0)
 ORANGE2 = (230,128,0)
 ORANGE3 = (230,158,0)
+
 BG_COLOR = ORANGE3
 FG_COLOR = ORANGE2
 POINT_COLOR = WHITE
@@ -76,10 +77,13 @@ comment_text = INPUT_FONT.render(f".", True, WHITE)
 
 # Fixed heights for timer and comment boxes
 TIMER_HEIGHT = 100 # pixels
+TIMER_WIDTH = 1 # %
+SCATTER_WIDTH = 1 # %
 SCATTER_HEIGHT = .65 # %
+HISTOGRAM_WIDTH = 1 # %
 HISTOGRAM_HEIGHT = .35 # %
 COMMENT_HEIGHT = 40 # pixels
-BORDER_RADIUS = 10
+BORDER_RADIUS = 10 # pixels
 outer_margin = 10  # pixels
 
 # Initialize screen (with resizable window)
