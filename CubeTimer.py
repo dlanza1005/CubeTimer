@@ -348,7 +348,10 @@ def draw_scatterplot_cached(screen, scatter_rect, session_list):
         scatter_plot_surface.fill(FG_COLOR)  # Fill with black or another background
 
         solve_times = [time for _, time, _ in session_list]
-        ctx = PlotContext(scatter_rect, 0, 30, len(solve_times))
+        if solve_times:
+            ctx = PlotContext(scatter_rect, 0, max(max(solve_times), 30), len(solve_times))
+        else:
+            ctx = PlotContext(scatter_rect, 0, 30, len(solve_times))
 
         draw_grid(scatter_plot_surface, ctx)
         draw_std_boxes(scatter_plot_surface, ctx, solve_times, window=20)
