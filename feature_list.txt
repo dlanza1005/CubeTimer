@@ -1,4 +1,4 @@
-CubeTimer — Features
+CubeTimer — Features Plan
 ====================
 Timer
 -Press SPACE to begin inspection countdown (15s)
